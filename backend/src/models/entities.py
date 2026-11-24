@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import JSON, DateTime, ForeignKey, String, Text, func
+from sqlalchemy import JSON, DateTime, ForeignKey, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from src.config.database import Base
@@ -29,6 +29,34 @@ class Enrollment(Base):
     venue: Mapped[str] = mapped_column(String(80), index=True)
     state: Mapped[str] = mapped_column(String(12))
     codes: Mapped[list] = mapped_column(JSON)
+    family_key: Mapped[str] = mapped_column(String(64), index=True, default='')
+
+
+class Experiment(Base):
+    __tablename__ = 'ab_experiments'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str] = mapped_column(String(100))
+    course_a: Mapped[str] = mapped_column(String(32))
+    course_b: Mapped[str] = mapped_column(String(32))
+    state: Mapped[str] = mapped_column(String(12), index=True, default='running')
+    author_id: Mapped[int] = mapped_column(ForeignKey('users.id'))
+    note: Mapped[str] = mapped_column(Text, default='')
+    result: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+class Assignment(Base):
+    """家庭分组记录。同一家庭全局唯一一条；first_venue 记录首次进组的场馆。"""
+    __tablename__ = 'ab_assignments'
+    id: Mapped[int] = mapped_column(primary_key=True)
+    experiment_id: Mapped[int] = mapped_column(ForeignKey('ab_experiments.id'), index=True)
+    family_key: Mapped[str] = mapped_column(String(64), index=True)
+    group: Mapped[str] = mapped_column(String(12))
+    first_venue: Mapped[str] = mapped_column(String(80))
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
+
+    __table_args__ = (UniqueConstraint('experiment_id', 'family_key', name='uq_assignment_experiment_family'),)
 
 
 class Analysis(Base):

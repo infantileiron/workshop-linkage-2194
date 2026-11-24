@@ -24,6 +24,7 @@ class EnrollmentInput(CleanInput):
     venue: str = Field(min_length=2, max_length=80)
     state: Literal['confirmed', 'cancelled']
     codes: list[str] = Field(max_length=30)
+    family_key: str = Field(min_length=2, max_length=64, pattern=r'^[A-Za-z0-9_-]{2,64}$')
 
     @field_validator('codes')
     @classmethod
@@ -45,4 +46,25 @@ class AnalysisInput(CleanInput):
 
 
 class Publication(CleanInput):
+    note: str = Field(min_length=3, max_length=400)
+
+
+class ExperimentInput(CleanInput):
+    title: str = Field(min_length=2, max_length=100)
+    course_a: str = Field(max_length=32)
+    course_b: str = Field(max_length=32)
+
+    @model_validator(mode='after')
+    def check_pair(self):
+        if self.course_a == self.course_b:
+            raise ValueError('请选择两门不同课程')
+        return self
+
+
+class AssignmentInput(CleanInput):
+    family_key: str = Field(min_length=2, max_length=64, pattern=r'^[A-Za-z0-9_-]{2,64}$')
+    venue: str = Field(min_length=2, max_length=80)
+
+
+class ExperimentNote(CleanInput):
     note: str = Field(min_length=3, max_length=400)

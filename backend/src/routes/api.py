@@ -3,10 +3,14 @@ from sqlalchemy import select
 
 from src.config.database import get_db
 from src.controllers.auth import current, login, manager, writable
-from src.controllers.export import export
+from src.controllers.export import export, export_experiment
 from src.models.entities import Analysis, Audit, Course, Enrollment
-from src.schemas.business import AnalysisInput, CourseInput, EnrollmentInput, Login, Publication
+from src.schemas.business import (
+    AnalysisInput, AssignmentInput, CourseInput, EnrollmentInput, ExperimentInput,
+    ExperimentNote, Login, Publication,
+)
 from src.services import business as svc
+from src.services import experiment as ab
 
 router = APIRouter(prefix='/api')
 
@@ -72,3 +76,40 @@ def publish(id: int, data: Publication, db=Depends(get_db), user=Depends(manager
 @router.get('/audits')
 def audit_log(db=Depends(get_db), user=Depends(manager)):
     return [svc.record(item) for item in db.scalars(select(Audit).order_by(Audit.id.desc()).limit(100))]
+
+
+# ---------- A/B 实验：组合推荐 vs 单课推荐 ----------
+
+@router.get('/experiments')
+def experiments(db=Depends(get_db), user=Depends(current)):
+    return ab.list_experiments(db)
+
+
+@router.post('/experiments', status_code=201)
+def create_experiment(data: ExperimentInput, db=Depends(get_db), user=Depends(writable)):
+    return ab.create_experiment(db, data, user)
+
+
+@router.get('/experiments/{id}')
+def experiment(id: int, db=Depends(get_db), user=Depends(current)):
+    return ab.reconcile(db, id)
+
+
+@router.get('/experiments/{id}/export')
+def experiment_export(id: int, db=Depends(get_db), user=Depends(current)):
+    return export_experiment(ab.reconcile(db, id))
+
+
+@router.get('/experiments/{id}/assignments')
+def assignments(id: int, db=Depends(get_db), user=Depends(current)):
+    return ab.list_assignments(db, id)
+
+
+@router.post('/experiments/{id}/assignments', status_code=201)
+def assign(id: int, data: AssignmentInput, db=Depends(get_db), user=Depends(writable)):
+    return ab.assign_family(db, id, data, user)
+
+
+@router.post('/experiments/{id}/end')
+def end_experiment(id: int, data: ExperimentNote, db=Depends(get_db), user=Depends(manager)):
+    return ab.end_experiment(db, id, data.note, user)

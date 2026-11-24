@@ -7,4 +7,11 @@ export const api = {
   analysis: id => send(`/analyses/${id}`),
   publish: (id, note) => send(`/analyses/${id}/publish`, {note}),
   export: id => send(`/analyses/${id}/export`, undefined, true),
+  experimentList: () => send('/experiments'),
+  experiment: id => send(`/experiments/${id}`),
+  experimentExport: id => send(`/experiments/${id}/export`, undefined, true),
+  createExperiment: data => send('/experiments', data),
+  assignments: id => send(`/experiments/${id}/assignments`),
+  assign: (id, data) => send(`/experiments/${id}/assignments`, data),
+  endExperiment: (id, note) => send(`/experiments/${id}/end`, {note}),
 };
